@@ -1,189 +1,114 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus, ArrowLeft, User, Mail, Lock } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { UserPlus, ArrowLeft } from 'lucide-react';
 import { api } from '../services/api';
-import { Header } from '../components/Header';
 
 export function Register() {
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [feedback, setFeedback] = useState({ type: '', message: '' });
 
-  const navigate = useNavigate();
-
-  async function handleSubmit(e) {
+  async function handleRegister(e) {
     e.preventDefault();
-    setError(null);
     setLoading(true);
+    setFeedback({ type: '', message: '' });
 
     try {
       await api.post('/auth/register', { name, email, password });
-      alert('Cadastro realizado com sucesso! Faça login para continuar.');
-      navigate('/login');
+      
+      setFeedback({
+        type: 'success',
+        message: 'Cadastro realizado com sucesso! A redirecionar para a página de login...',
+      });
+
+      setTimeout(() => {
+        navigate('/login');
+      }, 1500);
     } catch (err) {
-      console.error('Erro no cadastro:', err);
-      setError(
+      const msg =
         err.response?.data?.message ||
-          'Não foi possível realizar o cadastro. Tente novamente.'
-      );
-    } finally {
+        err.response?.data?.error ||
+        'Erro ao realizar o cadastro. Tente novamente.';
+      setFeedback({ type: 'error', message: msg });
       setLoading(false);
     }
   }
 
   return (
-    <div>
-      <Header />
+    <div style={{ maxWidth: '400px', margin: '40px auto', padding: '0 16px' }}>
+      <Link
+        to="/login"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          marginBottom: '20px',
+          color: 'var(--primary)',
+          fontWeight: '600',
+        }}
+      >
+        <ArrowLeft size={16} /> Voltar para o Login
+      </Link>
 
-      <div style={{ maxWidth: '420px', margin: '20px auto 0' }}>
-        <Link
-          to="/"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            marginBottom: '16px',
-            color: 'var(--primary)',
-            fontWeight: '600',
-            fontSize: '0.9rem',
-          }}
-        >
-          <ArrowLeft size={16} /> Voltar ao catálogo
-        </Link>
+      <section className="card-container">
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+          <UserPlus size={22} /> Criar Conta
+        </h2>
 
-        <section className="card-container">
-          <h2
+        {feedback.message && (
+          <div
             style={{
-              fontSize: '1.4rem',
-              fontWeight: '800',
-              marginBottom: '6px',
-              textAlign: 'center',
+              padding: '12px',
+              borderRadius: '6px',
+              marginBottom: '16px',
+              backgroundColor: feedback.type === 'success' ? '#dcfce7' : '#fee2e2',
+              color: feedback.type === 'success' ? '#166534' : '#991b1b',
+              fontSize: '0.9rem',
             }}
           >
-            Criar Conta no CineComp
-          </h2>
-          <p
-            style={{
-              fontSize: '0.875rem',
-              color: 'var(--text-muted)',
-              marginBottom: '20px',
-              textAlign: 'center',
-            }}
-          >
-            Preencha os dados abaixo para se cadastrar
-          </p>
-
-          {error && (
-            <div
-              style={{
-                backgroundColor: '#fef2f2',
-                border: '1px solid #fecaca',
-                color: 'var(--danger)',
-                padding: '10px 14px',
-                borderRadius: '8px',
-                marginBottom: '16px',
-                fontSize: '0.875rem',
-                textAlign: 'center',
-              }}
-            >
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '16px' }}>
-            <label style={{ display: 'grid', gap: '6px' }}>
-              <span
-                style={{
-                  fontSize: '0.85rem',
-                  fontWeight: '600',
-                  color: 'var(--text-muted)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <User size={14} /> Nome Completo
-              </span>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                placeholder="Seu nome"
-              />
-            </label>
-
-            <label style={{ display: 'grid', gap: '6px' }}>
-              <span
-                style={{
-                  fontSize: '0.85rem',
-                  fontWeight: '600',
-                  color: 'var(--text-muted)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <Mail size={14} /> E-mail
-              </span>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="seu@email.com"
-              />
-            </label>
-
-            <label style={{ display: 'grid', gap: '6px' }}>
-              <span
-                style={{
-                  fontSize: '0.85rem',
-                  fontWeight: '600',
-                  color: 'var(--text-muted)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <Lock size={14} /> Senha
-              </span>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="Crie uma senha"
-              />
-            </label>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn btn-primary"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                marginTop: '8px',
-              }}
-            >
-              <UserPlus size={18} />
-              {loading ? 'A cadastrar...' : 'Cadastrar'}
-            </button>
-          </form>
-
-          <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.9rem' }}>
-            <span style={{ color: 'var(--text-muted)' }}>Já tem uma conta? </span>
-            <Link to="/login" style={{ color: 'var(--primary)', fontWeight: '600' }}>
-              Entrar
-            </Link>
+            {feedback.message}
           </div>
-        </section>
-      </div>
+        )}
+
+        <form onSubmit={handleRegister} style={{ display: 'grid', gap: '14px' }}>
+          <label>
+            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Nome</span>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </label>
+
+          <label>
+            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>E-mail</span>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </label>
+
+          <label>
+            <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Senha</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </label>
+
+          <button type="submit" disabled={loading} className="btn btn-primary">
+            {loading ? 'A cadastrar...' : 'Cadastrar'}
+          </button>
+        </form>
+      </section>
     </div>
   );
 }

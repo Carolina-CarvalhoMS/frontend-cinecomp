@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Pencil, Trash2, ArrowLeft, Star, Save, X } from 'lucide-react';
+import { Pencil, Trash2, ArrowLeft, Star, Save, X, AlertTriangle } from 'lucide-react';
 import { api } from '../services/api';
 import { Header } from '../components/Header';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,6 +17,9 @@ export function MovieDetails() {
   const [feedback, setFeedback] = useState({ type: '', message: '' });
 
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   const [title, setTitle] = useState('');
   const [director, setDirector] = useState('');
   const [genre, setGenre] = useState('');
@@ -27,7 +30,7 @@ export function MovieDetails() {
 
   function normalizeTitle(str) {
     if (!str) return '';
-    return str
+    return String(str)
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -51,7 +54,7 @@ export function MovieDetails() {
       setTitle(data.title || '');
       setDirector(data.director || '');
       setGenre(data.genre || '');
-      setReleaseYear(data.releaseYear || '');
+      setReleaseYear(data.releaseYear || data.release_year || '');
       setRating(data.rating || '');
       setDescription(data.description || '');
     } catch (err) {
@@ -65,14 +68,15 @@ export function MovieDetails() {
     loadMovie();
   }, [id]);
 
-  async function handleDelete() {
-    if (window.confirm(`Deseja mesmo eliminar o filme "${movie.title}"?`)) {
-      try {
-        await api.delete(`/movies/${id}`);
-        navigate('/');
-      } catch (err) {
-        setFeedback({ type: 'error', message: 'Erro ao excluir filme.' });
-      }
+  async function confirmDelete() {
+    try {
+      setDeleting(true);
+      await api.delete(`/movies/${id}`);
+      navigate('/');
+    } catch (err) {
+      setFeedback({ type: 'error', message: 'Erro ao eliminar filme. Tente novamente.' });
+      setShowDeleteConfirm(false);
+      setDeleting(false);
     }
   }
 
@@ -93,7 +97,7 @@ export function MovieDetails() {
 
     const normalizedNewTitle = normalizeTitle(title);
     const isDuplicate = allMovies.some(
-      (m) => String(m.id) !== String(id) && normalizeTitle(m.title) === normalizedNewTitle
+      (m) => String(m.id || m._id) !== String(id) && normalizeTitle(m.title) === normalizedNewTitle
     );
 
     if (isDuplicate) {
@@ -173,7 +177,7 @@ export function MovieDetails() {
 
           <h1 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '8px' }}>{movie.title}</h1>
           <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>
-            Lançamento: <strong>{movie.releaseYear}</strong> | Direção: <strong>{movie.director || 'Não informada'}</strong>
+            Lançamento: <strong>{movie.releaseYear || movie.release_year}</strong> | Direção: <strong>{movie.director || 'Não informada'}</strong>
           </p>
 
           <div
@@ -190,21 +194,46 @@ export function MovieDetails() {
           </div>
 
           {signed && (
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => setIsEditing(true)}
-                className="btn btn-warning"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-              >
-                <Pencil size={16} /> Editar Filme
-              </button>
-              <button
-                onClick={handleDelete}
-                className="btn btn-danger"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-              >
-                <Trash2 size={16} /> Eliminar Filme
-              </button>
+            <div>
+              {showDeleteConfirm ? (
+                <div
+                  style={{
+                    padding: '16px',
+                    borderRadius: '8px',
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fecaca',
+                  }}
+                >
+                  <p style={{ color: '#991b1b', fontWeight: '600', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <AlertTriangle size={18} /> Tem certeza de que deseja eliminar o filme "{movie.title}"?
+                  </p>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button onClick={confirmDelete} disabled={deleting} className="btn btn-danger">
+                      {deleting ? 'A eliminar...' : 'Sim, Eliminar'}
+                    </button>
+                    <button onClick={() => setShowDeleteConfirm(false)} className="btn btn-outline">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="btn btn-warning"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Pencil size={16} /> Editar Filme
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="btn btn-danger"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Trash2 size={16} /> Eliminar Filme
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </article>
