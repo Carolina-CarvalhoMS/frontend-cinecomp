@@ -10,17 +10,7 @@ export function Home() {
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [feedback, setFeedback] = useState({ type: '', message: '' });
 
-  const [title, setTitle] = useState('');
-  const [director, setDirector] = useState('');
-  const [genre, setGenre] = useState('');
-  const [releaseYear, setReleaseYear] = useState('');
-  const [rating, setRating] = useState('');
-  const [description, setDescription] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  // Extrai o array de filmes independentemente do formato retornado pela API
   function extractMoviesArray(responseData) {
     if (Array.isArray(responseData)) return responseData;
     if (Array.isArray(responseData?.data)) return responseData.data;
@@ -33,11 +23,34 @@ export function Home() {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/movies');
-      const movieData = extractMoviesArray(response.data);
-      setMovies(movieData);
+
+      let apiMovies = [];
+      try {
+        const response = await api.get('/movies');
+        apiMovies = extractMoviesArray(response.data);
+      } catch (err) {
+        console.error('Erro ao buscar API:', err);
+      }
+
+      // Recupera os filmes salvos no localStorage do navegador
+      const savedLocalMovies = JSON.parse(localStorage.getItem('custom_movies') || '[]');
+
+      // Mescla os filmes cadastrados localmente com os da API sem criar duplicados
+      const mergedMovies = [...savedLocalMovies];
+      apiMovies.forEach((apiMovie) => {
+        const exists = mergedMovies.some(
+          (m) =>
+            String(m.id || m._id) === String(apiMovie.id || apiMovie._id) ||
+            m.title?.toLowerCase().trim() === (apiMovie.title || apiMovie.name)?.toLowerCase().trim()
+        );
+        if (!exists) {
+          mergedMovies.push(apiMovie);
+        }
+      });
+
+      setMovies(mergedMovies);
     } catch (err) {
-      console.error('Erro ao carregar filmes:', err);
+      console.error('Erro ao carregar catálogo:', err);
       setError('Erro ao carregar o catálogo de filmes. Verifique se a API está em execução.');
     } finally {
       setLoading(false);
@@ -48,153 +61,20 @@ export function Home() {
     fetchMovies();
   }, []);
 
-  function normalizeTitle(str) {
-    if (!str) return '';
-    return String(str)
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]/g, '');
-  }
-
-  async function handleCreateMovie(e) {
-    e.preventDefault();
-    setFeedback({ type: '', message: '' });
-
-    const yearNum = Number(releaseYear);
-    const currentYear = new Date().getFullYear();
-
-    if (isNaN(yearNum) || yearNum < 1888 || yearNum > currentYear) {
-      setFeedback({
-        type: 'error',
-        message: `O ano de lançamento deve ser entre 1888 e ${currentYear}.`,
-      });
-      return;
-    }
-
-    const normalizedNewTitle = normalizeTitle(title);
-
-    const isDuplicate = normalizedNewTitle && movies.some((movie) => {
-      const existingTitle = normalizeTitle(movie.title || movie.name);
-      return existingTitle && existingTitle === normalizedNewTitle;
-    });
-
-    if (isDuplicate) {
-      setFeedback({
-        type: 'error',
-        message: 'Já existe um filme cadastrado com este título no catálogo.',
-      });
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      const payload = {
-        title: title.trim(),
-        director: director.trim(),
-        genre: genre.trim(),
-        releaseYear: yearNum,
-        rating: Number(rating.toString().replace(',', '.')),
-        description: description.trim() || '',
-      };
-
-      await api.post('/movies', payload);
-
-      setFeedback({ type: 'success', message: 'Filme cadastrado com sucesso!' });
-      setTitle('');
-      setDirector('');
-      setGenre('');
-      setReleaseYear('');
-      setRating('');
-      setDescription('');
-
-      await fetchMovies();
-    } catch (err) {
-      console.error('Erro ao cadastrar filme na API:', err?.response || err);
-      const msg =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        'Erro ao cadastrar filme. Verifique se sua sessão ainda é válida.';
-      setFeedback({ type: 'error', message: msg });
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   return (
     <div>
       <Header />
 
       {signed && (
-        <section className="card-container" style={{ marginBottom: '32px' }}>
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <Plus size={20} /> Cadastrar Novo Filme
-          </h2>
-
-          {feedback.message && (
-            <div
-              style={{
-                padding: '12px',
-                borderRadius: '6px',
-                marginBottom: '16px',
-                backgroundColor: feedback.type === 'success' ? '#dcfce7' : '#fee2e2',
-                color: feedback.type === 'success' ? '#166534' : '#991b1b',
-                fontSize: '0.9rem',
-              }}
-            >
-              {feedback.message}
-            </div>
-          )}
-
-          <form onSubmit={handleCreateMovie} style={{ display: 'grid', gap: '14px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-              <label>
-                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Título</span>
-                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required />
-              </label>
-
-              <label>
-                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Diretor</span>
-                <input type="text" value={director} onChange={(e) => setDirector(e.target.value)} required />
-              </label>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
-              <label>
-                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Gênero</span>
-                <input type="text" value={genre} onChange={(e) => setGenre(e.target.value)} required />
-              </label>
-
-              <label>
-                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Ano</span>
-                <input
-                  type="number"
-                  min="1888"
-                  max={new Date().getFullYear()}
-                  placeholder="Ex: 2024"
-                  value={releaseYear}
-                  onChange={(e) => setReleaseYear(e.target.value)}
-                  required
-                />
-              </label>
-
-              <label>
-                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Nota</span>
-                <input type="number" step="0.1" min="0" max="10" value={rating} onChange={(e) => setRating(e.target.value)} required />
-              </label>
-            </div>
-
-            <label>
-              <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Sinopse</span>
-              <textarea rows="3" value={description} onChange={(e) => setDescription(e.target.value)} />
-            </label>
-
-            <button type="submit" disabled={submitting} className="btn btn-primary" style={{ justifySelf: 'start' }}>
-              {submitting ? 'A cadastrar...' : 'Cadastrar Filme'}
-            </button>
-          </form>
-        </section>
+        <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+          <Link
+            to="/cadastrar-filme"
+            className="btn btn-primary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            <Plus size={18} /> Cadastrar Novo Filme
+          </Link>
+        </div>
       )}
 
       <section>
@@ -210,22 +90,30 @@ export function Home() {
             {movies.length === 0 ? (
               <p style={{ color: 'var(--text-muted)' }}>Nenhum filme cadastrado no momento.</p>
             ) : (
-              movies.map((movie) => (
-                <article key={movie.id || movie._id || movie.title} className="card-container" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              movies.map((movie, index) => (
+                <article
+                  key={movie.id || movie._id || index}
+                  className="card-container"
+                  style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+                >
                   <div>
                     <div className="badge-group" style={{ marginBottom: '8px' }}>
-                      <span className="badge badge-genre">{movie.genre}</span>
+                      <span className="badge badge-genre">{movie.genre || 'Gênero'}</span>
                       <span className="badge badge-rating" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <Star size={14} fill="#b45309" color="#b45309" /> {movie.rating}
+                        <Star size={14} fill="#b45309" color="#b45309" /> {movie.rating ?? '0'}
                       </span>
                     </div>
-                    <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{movie.title}</h3>
+                    <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{movie.title || movie.name}</h3>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                      {movie.releaseYear || movie.release_year} | {movie.director}
+                      {movie.releaseYear || movie.release_year || 'S/A'} | {movie.director || 'Não informado'}
                     </p>
                   </div>
 
-                  <Link to={`/movies/${movie.id || movie._id}`} className="btn btn-outline" style={{ textAlign: 'center', marginTop: '12px' }}>
+                  <Link
+                    to={`/movies/${movie.id || movie._id}`}
+                    className="btn btn-outline"
+                    style={{ textAlign: 'center', marginTop: '12px' }}
+                  >
                     Ver Detalhes
                   </Link>
                 </article>
