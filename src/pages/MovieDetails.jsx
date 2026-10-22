@@ -13,6 +13,7 @@ export function MovieDetails() {
   const [movie, setMovie] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [feedback, setFeedback] = useState({ type: '', message: '' });
 
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState('');
@@ -49,10 +50,9 @@ export function MovieDetails() {
     if (window.confirm(`Deseja mesmo eliminar o filme "${movie.title}"?`)) {
       try {
         await api.delete(`/movies/${id}`);
-        alert('Filme removido!');
         navigate('/');
       } catch (err) {
-        alert('Erro ao excluir filme.');
+        setFeedback({ type: 'error', message: 'Erro ao excluir filme.' });
       }
     }
   }
@@ -60,6 +60,8 @@ export function MovieDetails() {
   async function handleUpdate(e) {
     e.preventDefault();
     setSaving(true);
+    setFeedback({ type: '', message: '' });
+
     try {
       await api.put(`/movies/${id}`, {
         title: title.trim(),
@@ -69,11 +71,11 @@ export function MovieDetails() {
         rating: Number(rating.toString().replace(',', '.')),
         description: description.trim() || undefined,
       });
-      alert('Filme atualizado com sucesso!');
+      setFeedback({ type: 'success', message: 'Filme atualizado com sucesso!' });
       setIsEditing(false);
       loadMovie();
     } catch (err) {
-      alert('Falha ao atualizar o filme.');
+      setFeedback({ type: 'error', message: 'Falha ao atualizar o filme.' });
     } finally {
       setSaving(false);
     }
@@ -100,6 +102,21 @@ export function MovieDetails() {
       >
         <ArrowLeft size={16} /> Voltar para o Catálogo
       </Link>
+
+      {feedback.message && (
+        <div
+          style={{
+            padding: '12px',
+            borderRadius: '6px',
+            marginBottom: '16px',
+            backgroundColor: feedback.type === 'success' ? '#dcfce7' : '#fee2e2',
+            color: feedback.type === 'success' ? '#166534' : '#991b1b',
+            fontSize: '0.9rem',
+          }}
+        >
+          {feedback.message}
+        </div>
+      )}
 
       {!isEditing ? (
         <article className="card-container">
