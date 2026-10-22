@@ -11,6 +11,7 @@ export function MovieDetails() {
   const { signed } = useAuth();
 
   const [movie, setMovie] = useState(null);
+  const [allMovies, setAllMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [feedback, setFeedback] = useState({ type: '', message: '' });
@@ -24,13 +25,29 @@ export function MovieDetails() {
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
 
+  function normalizeTitle(str) {
+    if (!str) return '';
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+  }
+
   async function loadMovie() {
     try {
       setLoading(true);
-      const response = await api.get(`/movies/${id}`);
-      const data = response.data.data || response.data;
+      const [responseMovie, responseAll] = await Promise.all([
+        api.get(`/movies/${id}`),
+        api.get('/movies'),
+      ]);
+
+      const data = responseMovie.data.data || responseMovie.data;
+      const listData = responseAll.data.data || responseAll.data;
 
       setMovie(data);
+      setAllMovies(Array.isArray(listData) ? listData : []);
+
       setTitle(data.title || '');
       setDirector(data.director || '');
       setGenre(data.genre || '');
@@ -44,7 +61,9 @@ export function MovieDetails() {
     }
   }
 
-  useEffect(() => { loadMovie(); }, [id]);
+  useEffect(() => {
+    loadMovie();
+  }, [id]);
 
   async function handleDelete() {
     if (window.confirm(`Deseja mesmo eliminar o filme "${movie.title}"?`)) {
@@ -59,15 +78,40 @@ export function MovieDetails() {
 
   async function handleUpdate(e) {
     e.preventDefault();
-    setSaving(true);
     setFeedback({ type: '', message: '' });
+
+    const yearNum = Number(releaseYear);
+    const currentYear = new Date().getFullYear();
+
+    if (isNaN(yearNum) || yearNum < 1888 || yearNum > currentYear) {
+      setFeedback({
+        type: 'error',
+        message: `O ano de lançamento deve ser entre 1888 e ${currentYear}.`,
+      });
+      return;
+    }
+
+    const normalizedNewTitle = normalizeTitle(title);
+    const isDuplicate = allMovies.some(
+      (m) => String(m.id) !== String(id) && normalizeTitle(m.title) === normalizedNewTitle
+    );
+
+    if (isDuplicate) {
+      setFeedback({
+        type: 'error',
+        message: 'Já existe outro filme cadastrado com este título.',
+      });
+      return;
+    }
+
+    setSaving(true);
 
     try {
       await api.put(`/movies/${id}`, {
         title: title.trim(),
         director: director.trim(),
         genre: genre.trim(),
-        releaseYear: Number(releaseYear),
+        releaseYear: yearNum,
         rating: Number(rating.toString().replace(',', '.')),
         description: description.trim() || undefined,
       });
@@ -122,20 +166,14 @@ export function MovieDetails() {
         <article className="card-container">
           <div className="badge-group" style={{ marginBottom: '12px' }}>
             <span className="badge badge-genre">{movie.genre}</span>
-            <span
-              className="badge badge-rating"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-            >
+            <span className="badge badge-rating" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
               <Star size={14} fill="#b45309" color="#b45309" /> {movie.rating} / 10
             </span>
           </div>
 
-          <h1 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '8px' }}>
-            {movie.title}
-          </h1>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '8px' }}>{movie.title}</h1>
           <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>
-            Lançamento: <strong>{movie.releaseYear}</strong> | Direção:{' '}
-            <strong>{movie.director || 'Não informada'}</strong>
+            Lançamento: <strong>{movie.releaseYear}</strong> | Direção: <strong>{movie.director || 'Não informada'}</strong>
           </p>
 
           <div
@@ -147,9 +185,7 @@ export function MovieDetails() {
               marginBottom: '24px',
             }}
           >
-            <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-              SINOPSE
-            </h4>
+            <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '6px' }}>SINOPSE</h4>
             <p>{movie.description || 'Sem sinopse cadastrada para este filme.'}</p>
           </div>
 
@@ -177,46 +213,41 @@ export function MovieDetails() {
           <h2 style={{ marginBottom: '20px' }}>Editar Filme</h2>
           <form onSubmit={handleUpdate} style={{ display: 'grid', gap: '14px' }}>
             <label>
-              <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
-                Título
-              </span>
+              <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Título</span>
               <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required />
             </label>
 
             <label>
-              <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
-                Diretor
-              </span>
+              <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Diretor</span>
               <input type="text" value={director} onChange={(e) => setDirector(e.target.value)} required />
             </label>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
               <label>
-                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
-                  Gênero
-                </span>
+                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Gênero</span>
                 <input type="text" value={genre} onChange={(e) => setGenre(e.target.value)} required />
               </label>
 
               <label>
-                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
-                  Ano
-                </span>
-                <input type="number" value={releaseYear} onChange={(e) => setReleaseYear(e.target.value)} required />
+                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Ano</span>
+                <input
+                  type="number"
+                  min="1888"
+                  max={new Date().getFullYear()}
+                  value={releaseYear}
+                  onChange={(e) => setReleaseYear(e.target.value)}
+                  required
+                />
               </label>
 
               <label>
-                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
-                  Nota
-                </span>
+                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Nota</span>
                 <input type="number" step="0.1" min="0" max="10" value={rating} onChange={(e) => setRating(e.target.value)} required />
               </label>
             </div>
 
             <label>
-              <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
-                Sinopse
-              </span>
+              <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Sinopse</span>
               <textarea rows="4" value={description} onChange={(e) => setDescription(e.target.value)} />
             </label>
 

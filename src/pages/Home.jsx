@@ -20,14 +20,25 @@ export function Home() {
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Extrai o array de filmes independentemente do formato retornado pela API
+  function extractMoviesArray(responseData) {
+    if (Array.isArray(responseData)) return responseData;
+    if (Array.isArray(responseData?.data)) return responseData.data;
+    if (Array.isArray(responseData?.movies)) return responseData.movies;
+    if (Array.isArray(responseData?.result)) return responseData.result;
+    return [];
+  }
+
   async function fetchMovies() {
     try {
       setLoading(true);
+      setError(null);
       const response = await api.get('/movies');
-      const data = response.data.data || response.data;
-      setMovies(Array.isArray(data) ? data : []);
+      const movieData = extractMoviesArray(response.data);
+      setMovies(movieData);
     } catch (err) {
-      setError('Erro ao carregar o catálogo de filmes.');
+      console.error('Erro ao carregar filmes:', err);
+      setError('Erro ao carregar o catálogo de filmes. Verifique se a API está em execução.');
     } finally {
       setLoading(false);
     }
@@ -37,20 +48,58 @@ export function Home() {
     fetchMovies();
   }, []);
 
+  function normalizeTitle(str) {
+    if (!str) return '';
+    return String(str)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+  }
+
   async function handleCreateMovie(e) {
     e.preventDefault();
-    setSubmitting(true);
     setFeedback({ type: '', message: '' });
 
+    const yearNum = Number(releaseYear);
+    const currentYear = new Date().getFullYear();
+
+    if (isNaN(yearNum) || yearNum < 1888 || yearNum > currentYear) {
+      setFeedback({
+        type: 'error',
+        message: `O ano de lançamento deve ser entre 1888 e ${currentYear}.`,
+      });
+      return;
+    }
+
+    const normalizedNewTitle = normalizeTitle(title);
+
+    const isDuplicate = normalizedNewTitle && movies.some((movie) => {
+      const existingTitle = normalizeTitle(movie.title || movie.name);
+      return existingTitle && existingTitle === normalizedNewTitle;
+    });
+
+    if (isDuplicate) {
+      setFeedback({
+        type: 'error',
+        message: 'Já existe um filme cadastrado com este título no catálogo.',
+      });
+      return;
+    }
+
+    setSubmitting(true);
+
     try {
-      await api.post('/movies', {
+      const payload = {
         title: title.trim(),
         director: director.trim(),
         genre: genre.trim(),
-        releaseYear: Number(releaseYear),
+        releaseYear: yearNum,
         rating: Number(rating.toString().replace(',', '.')),
-        description: description.trim() || undefined,
-      });
+        description: description.trim() || '',
+      };
+
+      await api.post('/movies', payload);
 
       setFeedback({ type: 'success', message: 'Filme cadastrado com sucesso!' });
       setTitle('');
@@ -59,9 +108,14 @@ export function Home() {
       setReleaseYear('');
       setRating('');
       setDescription('');
-      fetchMovies();
+
+      await fetchMovies();
     } catch (err) {
-      const msg = err.response?.data?.message || 'Erro ao cadastrar filme.';
+      console.error('Erro ao cadastrar filme na API:', err?.response || err);
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        'Erro ao cadastrar filme. Verifique se sua sessão ainda é válida.';
       setFeedback({ type: 'error', message: msg });
     } finally {
       setSubmitting(false);
@@ -114,7 +168,15 @@ export function Home() {
 
               <label>
                 <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Ano</span>
-                <input type="number" value={releaseYear} onChange={(e) => setReleaseYear(e.target.value)} required />
+                <input
+                  type="number"
+                  min="1888"
+                  max={new Date().getFullYear()}
+                  placeholder="Ex: 2024"
+                  value={releaseYear}
+                  onChange={(e) => setReleaseYear(e.target.value)}
+                  required
+                />
               </label>
 
               <label>
@@ -145,26 +207,30 @@ export function Home() {
 
         {!loading && !error && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-            {movies.map((movie) => (
-              <article key={movie.id} className="card-container" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div>
-                  <div className="badge-group" style={{ marginBottom: '8px' }}>
-                    <span className="badge badge-genre">{movie.genre}</span>
-                    <span className="badge badge-rating" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <Star size={14} fill="#b45309" color="#b45309" /> {movie.rating}
-                    </span>
+            {movies.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)' }}>Nenhum filme cadastrado no momento.</p>
+            ) : (
+              movies.map((movie) => (
+                <article key={movie.id || movie._id || movie.title} className="card-container" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div className="badge-group" style={{ marginBottom: '8px' }}>
+                      <span className="badge badge-genre">{movie.genre}</span>
+                      <span className="badge badge-rating" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Star size={14} fill="#b45309" color="#b45309" /> {movie.rating}
+                      </span>
+                    </div>
+                    <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{movie.title}</h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                      {movie.releaseYear || movie.release_year} | {movie.director}
+                    </p>
                   </div>
-                  <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{movie.title}</h3>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                    {movie.releaseYear} | {movie.director}
-                  </p>
-                </div>
 
-                <Link to={`/movies/${movie.id}`} className="btn btn-outline" style={{ textAlign: 'center', marginTop: '12px' }}>
-                  Ver Detalhes
-                </Link>
-              </article>
-            ))}
+                  <Link to={`/movies/${movie.id || movie._id}`} className="btn btn-outline" style={{ textAlign: 'center', marginTop: '12px' }}>
+                    Ver Detalhes
+                  </Link>
+                </article>
+              ))
+            )}
           </div>
         )}
       </section>
