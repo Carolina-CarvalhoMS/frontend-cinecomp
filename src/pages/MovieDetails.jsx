@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Pencil, Trash2, ArrowLeft, Star, Save, X } from 'lucide-react';
 import { api } from '../services/api';
 import { Header } from '../components/Header';
+import { useAuth } from '../contexts/AuthContext';
 
 export function MovieDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { signed } = useAuth();
 
   const [movie, setMovie] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,8 +22,6 @@ export function MovieDetails() {
   const [rating, setRating] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
-
-  const token = localStorage.getItem('@CineComp:token');
 
   async function loadMovie() {
     try {
@@ -86,31 +87,71 @@ export function MovieDetails() {
     <div>
       <Header />
 
-      <Link to="/" style={{ display: 'inline-block', marginBottom: '20px', color: 'var(--primary)', fontWeight: '600' }}>
-        ← Voltar para o Catálogo
+      <Link
+        to="/"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          marginBottom: '20px',
+          color: 'var(--primary)',
+          fontWeight: '600',
+        }}
+      >
+        <ArrowLeft size={16} /> Voltar para o Catálogo
       </Link>
 
       {!isEditing ? (
         <article className="card-container">
           <div className="badge-group" style={{ marginBottom: '12px' }}>
             <span className="badge badge-genre">{movie.genre}</span>
-            <span className="badge badge-rating">★ {movie.rating} / 10</span>
+            <span
+              className="badge badge-rating"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+            >
+              <Star size={14} fill="#b45309" color="#b45309" /> {movie.rating} / 10
+            </span>
           </div>
 
-          <h1 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '8px' }}>{movie.title}</h1>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '8px' }}>
+            {movie.title}
+          </h1>
           <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>
-            Lançamento: <strong>{movie.releaseYear}</strong> | Direção: <strong>{movie.director || 'Não informada'}</strong>
+            Lançamento: <strong>{movie.releaseYear}</strong> | Direção:{' '}
+            <strong>{movie.director || 'Não informada'}</strong>
           </p>
 
-          <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '24px' }}>
-            <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '6px' }}>SINOPSE</h4>
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: '#f8fafc',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              marginBottom: '24px',
+            }}
+          >
+            <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
+              SINOPSE
+            </h4>
             <p>{movie.description || 'Sem sinopse cadastrada para este filme.'}</p>
           </div>
 
-          {token && (
+          {signed && (
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <button onClick={() => setIsEditing(true)} className="btn btn-warning">✏️ Editar Filme</button>
-              <button onClick={handleDelete} className="btn btn-danger">🗑️ Eliminar Filme</button>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="btn btn-warning"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Pencil size={16} /> Editar Filme
+              </button>
+              <button
+                onClick={handleDelete}
+                className="btn btn-danger"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Trash2 size={16} /> Eliminar Filme
+              </button>
             </div>
           )}
         </article>
@@ -119,40 +160,66 @@ export function MovieDetails() {
           <h2 style={{ marginBottom: '20px' }}>Editar Filme</h2>
           <form onSubmit={handleUpdate} style={{ display: 'grid', gap: '14px' }}>
             <label>
-              <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Título</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
+                Título
+              </span>
               <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required />
             </label>
 
             <label>
-              <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Diretor</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
+                Diretor
+              </span>
               <input type="text" value={director} onChange={(e) => setDirector(e.target.value)} required />
             </label>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
               <label>
-                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Gênero</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
+                  Gênero
+                </span>
                 <input type="text" value={genre} onChange={(e) => setGenre(e.target.value)} required />
               </label>
 
               <label>
-                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Ano</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
+                  Ano
+                </span>
                 <input type="number" value={releaseYear} onChange={(e) => setReleaseYear(e.target.value)} required />
               </label>
 
               <label>
-                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Nota</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
+                  Nota
+                </span>
                 <input type="number" step="0.1" min="0" max="10" value={rating} onChange={(e) => setRating(e.target.value)} required />
               </label>
             </div>
 
             <label>
-              <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>Sinopse</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)' }}>
+                Sinopse
+              </span>
               <textarea rows="4" value={description} onChange={(e) => setDescription(e.target.value)} />
             </label>
 
             <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-              <button type="submit" disabled={saving} className="btn btn-success">{saving ? 'A guardar...' : 'Salvar Alterações'}</button>
-              <button type="button" onClick={() => setIsEditing(false)} className="btn btn-outline">Cancelar</button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="btn btn-success"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Save size={16} /> {saving ? 'A guardar...' : 'Salvar Alterações'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="btn btn-outline"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <X size={16} /> Cancelar
+              </button>
             </div>
           </form>
         </section>
