@@ -1,44 +1,44 @@
-# CineComp - Catálogo de Filmes Full-Stack
+# CineComp - Catálogo de Filmes (Front-End)
 
-O CineComp é uma aplicação web full-stack desenvolvida para a gestão e consulta de catálogos de filmes. O sistema oferece visualização pública de títulos e detalhes, além de funcionalidades completas de CRUD (Criar, Ler, Atualizar e Eliminar) protegidas por autenticação baseada em tokens JWT e gestão de acesso por rotas dedicadas.
+O CineComp é uma aplicação web front-end desenvolvida para a gestão e consulta de catálogos de filmes, integrada à API RESTful disponibilizada pela Comp Júnior. O sistema oferece visualização pública de títulos e detalhes, além de funcionalidades completas de CRUD (Criar, Ler, Atualizar e Eliminar) protegidas por autenticação baseada em tokens JWT e gestão de acesso por rotas privadas.
 
 ---
 
 ## Tecnologias Utilizadas e Justificativas
 
-### Front-end (Front-end Comp)
+### Front-End (Aplicação Desenvolvida)
 * **React (com Vite):** Escolhido pela elevada performance no desenvolvimento, renderização eficiente via Virtual DOM e facilidade na criação de interfaces reativas em Single Page Applications (SPA).
-* **Context API (AuthContext):** Utilizado para gerir o estado global de autenticação e sessão do utilizador de forma totalmente reativa entre todos os componentes (Header, Home, MovieDetails, CreateMovie).
-* **React Router DOM:** Adotado para a gestão de rotas do lado do cliente, incluindo o controlo de rotas protegidas (ProtectedRoute) e navegação sem recarregamento de página.
-* **Axios:** Utilizado para a integração HTTP com a API, configurado com intercetores para inclusão automática do token Bearer e fallback seguro da URL base.
+* **Context API (`AuthContext`):** Utilizado para gerir o estado global de autenticação e sessão do utilizador de forma totalmente reativa entre todos os componentes (`Header`, `Home`, `MovieDetails`, `CreateMovie`).
+* **React Router DOM:** Adotado para a gestão de rotas do lado do cliente, incluindo o controlo de rotas protegidas (`ProtectedRoute`) e navegação sem recarregamento de página.
+* **Axios:** Utilizado para a integração HTTP com a API REST, configurado com intercetores para inclusão automática do token Bearer nas requisições autenticadas.
 * **Lucide React:** Biblioteca de ícones vetoriais em SVG adotada para padronização visual moderna e limpa da interface.
-* **CSS3 Nativo (Variables & Flexbox/Grid):** Opção por CSS puro para manter a aplicação leve, garantindo total controlo sobre a estilização, temas e responsividade.
+* **CSS3 Nativo (Variables, Flexbox & CSS Grid):** Opção por CSS puro para manter a aplicação leve, garantindo total controlo sobre estilização, componentes e responsividade.
 
-### Back-end (cinecomp-api)
-* **Node.js com Express:** Selecionado pela eficiência no tratamento de requisições assíncronas e facilidade na construção de APIs RESTful estruturadas e escaláveis.
-* **JWT (JSON Web Tokens):** Implementado para autenticação segura e controlo de acesso baseado em sessão sem estado (stateless).
-* **Bcrypt.js:** Utilizado para a criptografia (hashing) segura de palavras-passe antes de serem armazenadas na base de dados.
-* **Validação e Normalização de Dados:** Lógica customizada para higienização de entradas e prevenção de cadastros e edições duplicadas.
+### Back-End Consumido (API Comp Júnior)
+* **Node.js com Express:** API RESTful que disponibiliza os recursos de filmes e autenticação.
+* **Autenticação JWT (JSON Web Tokens):** Integração com token de sessão retornado no login e exigido nas rotas de criação, edição e exclusão.
+* **Endpoints REST:** Integração com as rotas `/auth/login`, `/auth/register` e `/movies`.
 
 ---
 
 ## Arquitetura de Pastas do Front-End
 
-A aplicação segue uma estrutura de pastas organizada e lógica para facilitar a manutenção e escalabilidade:
+A aplicação segue uma estrutura de pastas organizada e modular em `src/`, facilitando a manutenção e a reutilização de código:
 
 ```text
-Front-end Comp/
+carolina-carvalhoms-frontend-cinecomp/
 ├── src/
-│   ├── components/     # Componentes reutilizáveis (Header, ProtectedRoute)
+│   ├── components/     # Componentes de interface reutilizáveis (Header)
 │   ├── contexts/       # Contexto global de autenticação (AuthContext)
-│   ├── pages/          # Páginas da aplicação (Home, MovieDetails, CreateMovie, Login)
-│   ├── routes/         # Configuração das rotas do React Router
-│   ├── services/       # Configuração da API e requisições Axios (api.js)
-│   ├── index.css       # Estilos globais e sistema de design
-│   ├── App.jsx         # Componente raiz com roteamento e AuthProvider
+│   ├── pages/          # Páginas/Telas principais (Home, MovieDetails, CreateMovie, Login, Register)
+│   ├── routes/         # Configuração de rotas e proteção de acesso (index.jsx, ProtectedRoute.jsx)
+│   ├── services/       # Cliente HTTP configurado com Axios (api.js)
+│   ├── index.css       # Estilos globais, variáveis e sistema de design
+│   ├── App.jsx         # Componente raiz envelopado pelo AuthProvider
 │   └── main.jsx        # Ponto de entrada do React
-├── public/             # Ficheiros estáticos
-├── .env                # Variáveis de ambiente (VITE_API_URL)
+├── public/             # Ficheiros estáticos da aplicação
+├── eslint.config.js    # Configurações do Linter
+├── vite.config.js      # Configurações do bundler Vite
 └── package.json        # Dependências e scripts do projeto
 ```
 
@@ -47,14 +47,14 @@ Front-end Comp/
 ## Funcionalidades Principais
 
 * **Catálogo Público:** Qualquer visitante pode navegar na página inicial e visualizar a lista de filmes cadastrados.
-* **Visualização Detalhada Pública:** Acesso irrestrito à página de detalhes (/movies/:id), permitindo que qualquer utilizador leia a sinopse, ano, realizador, género e nota dos filmes.
-* **Autenticação Reativa:** Autenticação via e-mail e palavra-passe integrada ao AuthContext, garantindo que botões de ação e acesso a formulários responda instantaneamente ao login ou logout.
-* **Rota Protegida de Cadastro (/cadastrar-filme):** Formulário isolado em rota própria e envolvido por ProtectedRoute, impedindo o acesso não autorizado de utilizadores deslogados.
-* **Edição e Exclusão Restritas:** Botões de alteração e remoção exibidos dinamicamente no ecrã de detalhes apenas quando há uma sessão ativa (signed).
-* **Persistência Híbrida de Dados:** Sincronização entre as chamadas da API via Axios e o localStorage do navegador, garantindo a permanência dos dados cadastrados, editados ou eliminados mesmo após recarregamentos de página ou encerramento de sessão.
-* **Prevenção de Duplicidade no Cadastro e Edição:** Sistema de validação rigoroso com normalização de strings, impedindo a criação ou renomeação de filmes com títulos já existentes no catálogo.
-* **Feedback Visual Integrado (Inline UI):** Banners estilizados de sucesso e erro na interface, fornecendo retorno imediato ao utilizador sem a utilização de janelas de aviso bloqueantes do navegador.
-* **Design Responsivo:** Layout adaptado para dispositivos móveis, tablets e monitores desktop utilizando CSS Grid e Flexbox.
+* **Visualização Detalhada Pública:** Acesso irrestrito à página de detalhes (`/movies/:id`), permitindo a qualquer utilizador consultar sinopse, ano, realizador, género e avaliação do filme.
+* **Autenticação Reativa:** Sistema de login via e-mail e palavra-passe integrado ao `AuthContext`, garantindo que os botões de ação e acesso a formulários respondam instantaneamente ao estado da sessão.
+* **Rota Protegida de Cadastro (`/cadastrar-filme`):** Formulário isolado em rota própria e protegido pelo componente `ProtectedRoute`, impedindo o acesso direto não autorizado de utilizadores deslogados.
+* **Edição e Exclusão Restritas:** Botões de alteração e remoção exibidos na tela de detalhes apenas quando há uma sessão ativa (`signed`).
+* **Persistência Híbrida e Resiliência:** Sincronização entre as chamadas da API via Axios e o `localStorage` do navegador (`custom_movies`), garantindo a permanência e integridade dos dados cadastrados, editados ou eliminados durante a navegação.
+* **Prevenção de Duplicidade:** Sistema de validação com normalização de strings (`normalizeTitle()`), impedindo a criação ou renomeação de filmes com títulos já existentes no catálogo.
+* **Feedback Visual Integrado (Inline UI):** Mensagens estilizadas de erro, sucesso e estado de carregamento (`loading`/`submitting`), fornecendo retorno claro sem bloqueios do navegador.
+* **Design Responsivo:** Layout adaptado para dispositivos móveis, tablets e computadores desktop.
 
 ---
 
@@ -63,13 +63,13 @@ Front-end Comp/
 ### Pré-requisitos
 * Node.js (versão 18 ou superior)
 * npm ou yarn
-* Navegador moderno (Google Chrome, Firefox, Edge ou Safari)
+* Navegador moderno
 
 ---
 
-### 1. Executar o Back-end (API)
+### 1. Executar o Back-End (API Fornecida)
 
-1. Abra um terminal e navegue até à pasta da API:
+1. Abra o terminal e navegue até à pasta da API fornecida:
    ```bash
    cd cinecomp-api
    ```
@@ -81,37 +81,34 @@ Front-end Comp/
    ```bash
    npm run dev
    ```
-   *(O servidor será executado no endereço `http://localhost:3000` com endpoints em `/api`).*
+   *(A API estará a ser executada no endereço `http://localhost:3000/api`).*
 
 ---
 
-### 2. Executar o Front-end (React)
+### 2. Executar o Front-End (Aplicação React)
 
-1. Abra um segundo terminal e navegue até à pasta do Front-end:
+1. Abra um segundo terminal e navegue até à pasta do Front-End:
    ```bash
-   cd "Front-end Comp"
+   cd carolina-carvalhoms-frontend-cinecomp
    ```
 2. Instale as dependências:
    ```bash
    npm install
    ```
-3. Configure o ficheiro `.env` na raiz do front-end:
-   ```env
-   VITE_API_URL=http://localhost:3000/api
-   ```
-4. Inicie a aplicação React:
+3. Inicie a aplicação React:
    ```bash
    npm run dev
    ```
-5. Aceda ao URL informado no terminal (ex: `http://localhost:5173`) no seu navegador.
+4. Aceda ao URL informado no terminal (geralmente `http://localhost:5173`) no seu navegador.
 
 ---
 
-## Rotas da API (Endpoints)
+## Rotas da API Consumida
 
-| Método | Rota | Descrição | Autenticação |
+| Método | Rota | Descrição | Autenticação Exigida |
 | :--- | :--- | :--- | :--- |
 | `POST` | `/auth/login` | Autentica o utilizador e retorna o token JWT | Não |
+| `POST` | `/auth/register` | Cadastra um novo utilizador no sistema | Não |
 | `GET` | `/movies` | Lista todos os filmes do catálogo | Não |
 | `GET` | `/movies/:id` | Retorna os detalhes de um filme específico | Não |
 | `POST` | `/movies` | Cadastra um novo filme no catálogo | **Sim (Bearer Token)** |
@@ -123,31 +120,26 @@ Front-end Comp/
 ## Dificuldades Encontradas e Soluções
 
 1. **Gestão Reativa de Autenticação e Proteção de Rotas:**
-   * **Desafio:** Garantir que a rota de criação de filmes estivesse protegida contra acessos diretos via URL por utilizadores não autenticados e que os botões de ação respondessem ao login/logout.
-   * **Solução:** Implementação do componente `ProtectedRoute` combinado ao `AuthContext` e hook `useAuth()`, redirecionando tentativas não autorizadas e gerindo o acesso a rotas privadas.
+   * **Desafio:** Proteger rotas sensíveis contra acessos diretos por URL e garantir a atualização da interface sem necessidade de recarregar a página.
+   * **Solução:** Desenvolvimento do componente `ProtectedRoute` combinado ao `AuthContext` e hook `useAuth()`, redirecionando utilizadores não autenticados e controlando a visibilidade de ações do CRUD.
 
-2. **Persistência de Dados e Resiliência contra Limitações de API:**
-   * **Desafio:** Garantir que os filmes cadastrados, editados ou eliminados permanecessem visíveis de forma consistente em todos os ecrãs (público e privado) mesmo quando a API operava de forma não persistente.
-   * **Solução:** Desenvolvimento de uma estratégia híbrida no front-end, combinando as requisições HTTP do Axios com armazenamento persistente em `localStorage` (`custom_movies`), mantendo a sincronização do catálogo em todas as navegações e atualizações de página.
+2. **Persistência de Dados e Sincronização com a API:**
+   * **Desafio:** Assegurar a integridade da visualização dos dados cadastrados e editados, garantindo a exibição consistente dos filmes em todas as telas.
+   * **Solução:** Implementação de uma arquitetura híbrida no front-end, associando requisições HTTP do Axios com armazenamento persistente em `localStorage` (`custom_movies`), sincronizando o catálogo após operações de adição, edição ou remoção.
 
 3. **Prevenção de Cadastros e Edições Duplicadas:**
-   * **Desafio:** Evitar o cadastro ou a edição de filmes que gerassem títulos duplicados no catálogo, ignorando variações de maiúsculas, minúsculas, acentos ou pontuações.
-   * **Solução:** Criação da função `normalizeTitle()`, aplicada tanto no fluxo de cadastro (`/cadastrar-filme`) quanto no formulário de edição (`MovieDetails`), validando a lista completa antes de efetuar a gravação.
+   * **Desafio:** Impedir cadastros e edições com títulos duplicados, ignorando diferenças de maiúsculas, minúsculas, acentos ou caracteres especiais.
+   * **Solução:** Criação da função de normalização `normalizeTitle()`, aplicada nas páginas de criação (`CreateMovie`) e alteração (`MovieDetails`) antes do envio dos formulários.
 
-4. **Resolução de Cache do Navegador (HTTP 304):**
-   * **Desafio:** O navegador mantinha em memória cache respostas antigas de `GET /movies`, impedindo a atualização imediata da interface ao navegar entre ecrãs.
-   * **Solução:** Adição de parâmetros dinâmicos de timestamp/aleatoriedade nas requisições e configuração de cabeçalhos de controlo de cache (`Cache-Control`, `Pragma`, `If-None-Match`) nas chamadas do Axios.
-
-5. **Experiência do Utilizador (UX) e Feedback Visual:**
-   * **Desafio:** Substituir avisos nativos do navegador (`window.alert`) por um sistema visualmente integrado e não intrusivo.
-   * **Solução:** Criação de componentes de feedback inline (banners estilizados de erro e sucesso) e integração da biblioteca `lucide-react` para sinalização com ícones.
+4. **Experiência do Utilizador (UX) e Feedback Visual:**
+   * **Desafio:** Substituir alertas padrão do navegador por elementos visuais integrados ao layout.
+   * **Solução:** Criação de componentes de feedback inline (banners estilizados de erro e sucesso) e inclusão da biblioteca `lucide-react` para representação visual contextualizada.
 
 ---
 
 ## Melhorias Futuras
 
-* **Fluxo de Recuperação de Palavra-Passe:** Implementação de envio de e-mail com token temporário para redefinição de palavras-passe esquecidas.
-* **Busca e Filtros Avançados:** Filtro por género, ano de lançamento, realizador e ordenação por avaliação.
-* **Upload de Capas/Cartazes:** Suporte ao envio de ficheiros de imagem no formulário de cadastro do filme.
-* **Notificações Toast:** Integração com bibliotecas flutuantes temporizadas (como `sonner`) para confirmações de ações.
-* **Tema Escuro (Dark Mode):** Alternância dinâmica entre modo claro e escuro utilizando variáveis CSS e persistência da preferência do utilizador.
+* **Filtros e Pesquisa Avançada:** Busca por título, filtro por género e ordenação por avaliação/ano.
+* **Upload de Capas:** Suporte para envio e exibição de imagens dos cartazes dos filmes.
+* **Notificações Toast:** Integração de alertas temporizados e flutuantes para ações do CRUD.
+* **Tema Escuro (Dark Mode):** Alternância entre temas claro e escuro armazenada nas preferências do utilizador.
